@@ -88,12 +88,13 @@ export const login = async (req, res) => {
       posts: populatedPosts.filter((p) => p), // filter out nulls
     };
 
-    // ✅ Set cookie (secure only in production)
+   const isProduction = process.env.NODE_ENV === "production";
+
     return res
       .cookie("token", token, {
         httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
+        sameSite: isProduction ? "none" : "lax", 
+        secure: isProduction,
         maxAge: 24 * 60 * 60 * 1000,
         path: "/",
       })
