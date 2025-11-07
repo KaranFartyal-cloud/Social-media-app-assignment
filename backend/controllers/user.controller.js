@@ -47,21 +47,22 @@ export const login = async (req, res) => {
   if (!email || !password) {
     return res.status(400).json({
       success: false,
-      message: "please provide all the details",
+      message: "Please provide all the details",
     });
   }
 
   try {
-    const user = await User.findOne({ email: email });
+    const user = await User.findOne({ email });
+
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "Can't find user with this email",
+        message: "User not found",
       });
     }
 
-    const isPasswordMatch = bcrypt.compare(password, user.password);
-
+    // ✅ Fix: Await password comparison
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
     if (!isPasswordMatch) {
       return res.status(401).json({
         success: false,
@@ -69,16 +70,14 @@ export const login = async (req, res) => {
       });
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET_KEY);
+    // ✅ Token generation
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET_KEY, {
+      expiresIn: "1d",
+    });
 
-    const populatedPost = await Promise.all(
-      user.posts.map(async (postId) => {
-        const post = await Post.findById(postId);
-
-        if (post.author.equals(user._id)) {
-          return post;
-        }
-      })
+    // ✅ Populate posts if needed
+    const populatedPosts = await Promise.all(
+      user.posts.map(async (postId) => await Post.findById(postId))
     );
 
     const userToShow = {
@@ -86,27 +85,32 @@ export const login = async (req, res) => {
       username: user.username,
       email: user.email,
       profilePicture: user.profilePicture,
-
-      posts: populatedPost,
+      posts: populatedPosts.filter((p) => p), // filter out nulls
     };
 
+    // ✅ Set cookie (secure only in production)
     return res
       .cookie("token", token, {
         httpOnly: true,
         sameSite: "lax",
-        secure: false,
+        secure: process.env.NODE_ENV === "production",
         maxAge: 24 * 60 * 60 * 1000,
         path: "/",
       })
       .json({
-        message: `${user.username} is logged in`,
         success: true,
+        message: `${user.username} logged in successfully`,
         userToShow,
       });
   } catch (error) {
-    console.log(error);
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
+
 
 export const logout = async (req, res) => {
   try {
