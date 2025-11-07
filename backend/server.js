@@ -13,17 +13,18 @@ const port = process.env.PORT || 3000;
 
 //cors options and cors config
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 
 connectDb();
 
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
-
-app.get("/", (req, res) => {
-  res.send("app is running");
-});
 
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/post", postRoutes);
