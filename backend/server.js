@@ -12,10 +12,22 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 //cors options and cors config
+const allowedOrigins = [
+  "https://social-media-app-assignment.vercel.app",
+  "http://localhost:5173",
+];
 
 app.use(
   cors({
-    origin: "https://social-media-app-assignment.vercel.app"|| "http://localhost:5173",
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        return callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
